@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Read(//Users/dinurirupasinghe/Desktop/int_data/int-data-viz-project/src/components/**)",
-      "Read(//Users/dinurirupasinghe/Desktop/int_data/int-data-viz-project/src/data/**)",
-      "Read(//Users/dinurirupasinghe/Desktop/int_data/int-data-viz-project/**)"
-    ]
-  }
-}
