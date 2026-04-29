@@ -19,13 +19,13 @@
       body: 'Second mission extension vehicle, docking with Intelsat 10-02. Confirmed MEV as a repeatable operational concept, not a one-off demonstration.',
     },
     {
-      year: '2022',
+      year: '2005',
       name: 'DART',
-      org: 'NASA',
+      org: 'NASA / Orbital Sciences',
       color: '#8b5cf6',
-      icon: '☄',
-      tags: ['Autonomous', 'Terminal Guidance', 'Non-cooperative'],
-      body: 'Planetary defense mission that validated autonomous terminal guidance to close on a non-cooperative target. Algorithms and sensing approaches directly relevant to CPO.',
+      icon: '⚠',
+      tags: ['Autonomous Rendezvous', 'LEO', 'Partial Failure'],
+      body: 'Demonstration for Autonomous Rendezvous Technology — the first U.S. attempt at fully autonomous spacecraft rendezvous, targeting the MUBLCOM satellite. A navigation system failure at ~200 m separation triggered an uncontrolled approach; DART collided with its target at 1.5 m/s and depleted propellant within minutes. Only 11 of 27 primary objectives were met, and none of the 14 proximity operations objectives succeeded. A landmark cautionary case: demonstrating both the promise of autonomous CPO and the critical consequences of navigation and fault-management failures.',
     },
     {
       year: 'TBD',
