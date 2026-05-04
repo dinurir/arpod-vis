@@ -58,6 +58,75 @@
     document.querySelector(`[data-section="${id}"]`)?.scrollIntoView({ behavior: 'smooth' });
   }
 
+  // ── Autoscroll ────────────────────────────────────────────────────────────
+  const SCROLL_TARGETS = ['hero', ...SECTIONS.map(s => `[data-section="${s.id}"]`)];
+  const DWELL_MS = { slow: 9000, medium: 5500, fast: 3000 };
+
+  let autoScrolling  = false;
+  let autoSpeed      = 'medium';
+  let autoIdx        = 0;
+  let autoTimer      = null;
+  let userScrolling  = false;
+  let userScrollTimer = null;
+
+  function autoAdvance() {
+    if (!autoScrolling) return;
+    if (autoIdx >= SCROLL_TARGETS.length) { stopAutoScroll(); return; }
+
+    const sel = SCROLL_TARGETS[autoIdx];
+    const el  = sel === 'hero'
+      ? document.querySelector('.hero')
+      : document.querySelector(sel);
+    el?.scrollIntoView({ behavior: 'smooth' });
+    autoIdx++;
+
+    autoTimer = setTimeout(autoAdvance, DWELL_MS[autoSpeed]);
+  }
+
+  function startAutoScroll() {
+    // Pick up from current section rather than always restarting from top
+    autoIdx = currentSection < 0 ? 0 : currentSection + 1; // +1 = hero is index 0
+    autoScrolling = true;
+    autoAdvance();
+  }
+
+  function stopAutoScroll() {
+    autoScrolling = false;
+    clearTimeout(autoTimer);
+  }
+
+  function toggleAutoScroll() {
+    autoScrolling ? stopAutoScroll() : startAutoScroll();
+  }
+
+  // Pause on manual scroll, resume after 1.5s of no movement
+  function onUserScroll() {
+    if (!autoScrolling) return;
+    userScrolling = true;
+    stopAutoScroll();
+    clearTimeout(userScrollTimer);
+    userScrollTimer = setTimeout(() => {
+      userScrolling = false;
+    }, 1500);
+  }
+
+  onMount(() => {
+    window.addEventListener('wheel',     onUserScroll, { passive: true });
+    window.addEventListener('touchmove', onUserScroll, { passive: true });
+  });
+  onDestroy(() => {
+    stopAutoScroll();
+    window.removeEventListener('wheel',     onUserScroll);
+    window.removeEventListener('touchmove', onUserScroll);
+  });
+
+  // Keep autoIdx in sync when user manually navigates
+  $: if (currentSection >= 0 && !autoScrolling) autoIdx = currentSection + 1;
+
+  // Progress: which scroll target are we on (0 = hero, 1–7 = sections)
+  $: autoProgress = currentSection < 0 ? 0 : currentSection + 1;
+  $: autoProgressPct = (autoProgress / (SCROLL_TARGETS.length - 1)) * 100;
+
   // ── Kessler counter animation ─────────────────────────────────────────────
   let debrisCount = 0;
   let debrisAnimId = null;
@@ -112,6 +181,54 @@
     </div>
   </div>
 </nav>
+
+<!-- ── Autoscroll bar ───────────────────────────────────────────────────── -->
+<div class="autoscroll-bar" class:scrolled={!heroVisible}>
+  <div class="autoscroll-inner">
+
+    <button class="as-btn" class:playing={autoScrolling} on:click={toggleAutoScroll}>
+      {#if autoScrolling}
+        <span class="as-icon">⏸</span> Pause
+      {:else}
+        <span class="as-icon">▶</span> Autoscroll
+      {/if}
+    </button>
+
+    <div class="as-speed">
+      {#each ['slow','medium','fast'] as s}
+        <button
+          class="as-speed-btn"
+          class:active={autoSpeed === s}
+          on:click={() => { autoSpeed = s; }}
+        >{s}</button>
+      {/each}
+    </div>
+
+    <div class="as-progress-wrap" title="{autoProgress} / {SCROLL_TARGETS.length - 1}">
+      <div class="as-progress-track">
+        <div class="as-progress-fill" style="width:{autoProgressPct}%"></div>
+      </div>
+      <div class="as-progress-pips">
+        {#each SCROLL_TARGETS as _, i}
+          <button
+            class="as-pip"
+            class:reached={i <= autoProgress}
+            class:current={i === autoProgress}
+            on:click={() => {
+              stopAutoScroll();
+              autoIdx = i;
+              const sel = SCROLL_TARGETS[i];
+              const el = sel === 'hero' ? document.querySelector('.hero') : document.querySelector(sel);
+              el?.scrollIntoView({ behavior: 'smooth' });
+            }}
+            title={i === 0 ? 'Intro' : SECTIONS[i-1]?.nav}
+          ></button>
+        {/each}
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- ── Hero ─────────────────────────────────────────────────────────────── -->
 <header class="hero">
@@ -820,6 +937,130 @@
     font-size: 0.68rem;
     color: var(--faint);
   }
+
+  /* ── Autoscroll bar ───────────────────────────────────────────────────── */
+  .autoscroll-bar {
+    position: fixed;
+    top: 44px; /* sits just below the nav */
+    left: 0;
+    right: 0;
+    z-index: 890;
+    padding: 0.45rem 2rem;
+    transition: background 300ms ease, border-color 300ms ease;
+    border-bottom: 1px solid transparent;
+  }
+
+  .autoscroll-bar.scrolled {
+    background: rgba(5, 10, 20, 0.88);
+    backdrop-filter: blur(12px);
+    border-bottom-color: rgba(99,179,237,0.08);
+  }
+
+  .autoscroll-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+  }
+
+  .as-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.38rem;
+    background: none;
+    border: 1px solid var(--border-bright);
+    color: var(--cyan);
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 0.3rem 0.75rem;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: background 150ms ease, border-color 150ms ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .as-btn:hover    { background: rgba(6,182,212,0.08); }
+  .as-btn.playing  { color: var(--amber); border-color: rgba(245,158,11,0.4); }
+  .as-btn.playing:hover { background: rgba(245,158,11,0.07); }
+
+  .as-icon { font-size: 0.7rem; }
+
+  .as-speed {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+    flex-shrink: 0;
+  }
+
+  .as-speed-btn {
+    background: none;
+    border: 1px solid transparent;
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 0.22rem 0.45rem;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: color 150ms ease, border-color 150ms ease;
+    text-transform: uppercase;
+  }
+
+  .as-speed-btn:hover  { color: var(--ink); }
+  .as-speed-btn.active { color: var(--cyan); border-color: rgba(6,182,212,0.3); }
+
+  /* Progress track + pips */
+  .as-progress-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+  }
+
+  .as-progress-track {
+    height: 2px;
+    background: rgba(99,179,237,0.1);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+
+  .as-progress-fill {
+    height: 100%;
+    background: var(--cyan);
+    border-radius: 1px;
+    transition: width 600ms ease;
+  }
+
+  .as-progress-pips {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .as-pip {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    border: 1px solid rgba(99,179,237,0.25);
+    background: transparent;
+    cursor: pointer;
+    padding: 0;
+    transition: background 200ms ease, border-color 200ms ease, transform 150ms ease;
+    flex-shrink: 0;
+  }
+
+  .as-pip:hover    { transform: scale(1.4); border-color: var(--cyan); }
+  .as-pip.reached  { background: rgba(6,182,212,0.35); border-color: rgba(6,182,212,0.5); }
+  .as-pip.current  { background: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 6px rgba(6,182,212,0.6); }
+
+  /* Push hero + content down to account for the two fixed bars */
+  .hero  { padding-top: 88px; }
 
   /* ── Responsive ───────────────────────────────────────────────────────── */
   @media (max-width: 900px) {
